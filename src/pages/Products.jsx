@@ -51,10 +51,14 @@ function Products() {
       try {
         const productData = await getProducts();
         const categoryData = await getCategories();
-        setProducts(productData.products || []);
+        setProducts(productData?.products || []);
         setCategories(categoryData || []);
+        if (categoryData.length) {
+            setProdCategory(categoryData[0]._id || categoryData[0].id);
+        }
       } catch (error) {
         console.error('Failed to load products data:', error);
+        alert(error.message);
       }
     };
 
@@ -71,7 +75,7 @@ function Products() {
   const [catColor, setCatColor] = useState("None");
   const [catActive, setCatActive] = useState(true);
   const [prodName, setProdName] = useState("");
-  const [prodCategory, setProdCategory] = useState("Food");
+  const [prodCategory, setProdCategory] = useState("");
   const [prodSku, setProdSku] = useState("");
   const [prodBarcode, setProdBarcode] = useState("");
   const [prodPrice, setProdPrice] = useState("");
@@ -114,18 +118,33 @@ function Products() {
       const initials = prodName.trim().substring(0, 2).toUpperCase();
       const colors = ["#84cc16", "#14b8a6", "#3b82f6", "#a855f7", "#ec4899", "#f97316"];
       const randomColor = colors[Math.floor(Math.random() * colors.length)];
+      console.log("Sending category:", prodCategory);
+console.log("Categories:", categories);
 
-      const newProd = await createProduct({
-        name: prodName.trim(),
-        initials,
-        badgeColor: randomColor,
-        category: prodCategory,
-        active: prodActive,
-        price: parseFloat(prodPrice) || 0,
-        sku: prodSku,
-        barcode: prodBarcode,
-        tags: prodSelectedTags
-      });
+      const selectedCategory = categories.find(
+  (c) =>
+    c._id === prodCategory ||
+    c.id === prodCategory ||
+    c.name === prodCategory
+);
+
+console.log("Selected category ID:", prodCategory);
+
+const payload = {
+  name: prodName.trim(),
+  initials,
+  badgeColor: randomColor,
+  category: prodCategory,
+  active: prodActive,
+  price: Number(prodPrice),
+  sku: prodSku,
+  barcode: prodBarcode,
+  tags: prodSelectedTags,
+};
+
+console.log("Payload:", payload);
+
+const newProd = await createProduct(payload);
 
       setProducts((prev) => [...prev, newProd]);
       setProdName("");
@@ -156,12 +175,12 @@ function Products() {
   };
 
   const deleteCategory = (id) => {
-    setCategories(categories.filter((c) => c.id !== id));
+    setCategories(categories.filter((c) => c._id !== id));
   };
 
   const deleteProduct = (id) => {
-    setProducts(products.filter((p) => p.id !== id));
-  };
+  setProducts((prev) => prev.filter((p) => p._id !== id));
+};
 
   const exportCSV = () => {
     let csvContent = "data:text/csv;charset=utf-8,";
@@ -270,7 +289,7 @@ function Products() {
                 </tr>
               ) : (
                 products.map((prod) => (
-                  <tr key={prod.id}>
+                  <tr key={prod._id}>
                     <td>
                       <div className="product-cell">
                         <div
@@ -282,7 +301,7 @@ function Products() {
                         <span className="product-name-text">{prod.name}</span>
                       </div>
                     </td>
-                    <td>{prod.category}</td>
+                    <td>{prod.category?.name||"-"}</td>
                     <td>
                       <span className={`status-badge ${prod.active ? "active" : "inactive"}`}>
                         {prod.active ? "Active" : "Inactive"}
@@ -296,7 +315,7 @@ function Products() {
                           onClick={() => {
                             setProdName(prod.name);
                             setProdPrice(prod.price.toString());
-                            setProdCategory(prod.category);
+                            setProdCategory(prod.category?._id||"");
                             setShowAddProductModal(true);
                           }}
                         >
@@ -305,7 +324,7 @@ function Products() {
                         <button
                           className="icon-action-btn delete"
                           title="Delete Product"
-                          onClick={() => deleteProduct(prod.id)}
+                          onClick={() => deleteProduct(prod._id)}
                         >
                           <FaTrash />
                         </button>
@@ -340,7 +359,7 @@ function Products() {
                 </tr>
               ) : (
                 categories.map((cat) => (
-                  <tr key={cat.id}>
+                  <tr key={cat._id}>
                     <td style={{ fontWeight: 700 }}>{cat.name}</td>
                     <td>
                       {cat.color && cat.color !== "None" ? (
@@ -379,7 +398,7 @@ function Products() {
                         <button
                           className="icon-action-btn delete"
                           title="Delete Category"
-                          onClick={() => deleteCategory(cat.id)}
+                          onClick={() => deleteCategory(cat._id)}
                         >
                           <FaTrash />
                         </button>
@@ -557,17 +576,17 @@ function Products() {
                     Category <span className="required-star">*</span>
                   </label>
                   <select
-                    className="form-select"
-                    value={prodCategory}
-                    onChange={(e) => setProdCategory(e.target.value)}
-                    required
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.name}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                     className="form-select"
+                     value={prodCategory}
+                     onChange={(e) => setProdCategory(e.target.value)}
+                     required
+                     >
+  {categories.map((c) => (
+    <option key={c._id } value={c._id }>
+      {c.name}
+    </option>
+  ))}
+</select>
                 </div>
 
                 <div className="form-group-block">
