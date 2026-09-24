@@ -123,9 +123,9 @@ function Dashboard() {
   ];
 
   return (
-    <div style={{ padding: 24, color: "#fff", background: "#0f172a", minHeight: "100vh" }}>
+    <div style={{ padding: 24, color: "var(--text-main)", background: "var(--bg-dark)", minHeight: "100%" }}>
       <h1 style={{ marginBottom: 5 }}>Restaurant Dashboard</h1>
-      <p style={{ color: "#94a3b8" }}>
+      <p style={{ color: "var(--text-muted)" }}>
         Live overview of sales, orders and restaurant performance.
       </p>
 
@@ -143,10 +143,10 @@ function Dashboard() {
           <div
             key={card.title}
             style={{
-              background: "#1e293b",
+              background: "var(--bg-card)",
               borderRadius: 18,
               padding: 20,
-              border: "1px solid #334155",
+              border: "1px solid var(--border-color)",
             }}
           >
             <div
@@ -204,23 +204,24 @@ function Dashboard() {
 
         <div
           style={{
-            background: "#1e293b",
+            background: "var(--bg-card)",
             borderRadius: 18,
             padding: 20,
+            border: "1px solid var(--border-color)",
           }}
         >
           <h3>Revenue Trend</h3>
 
-          <p style={{ color: "#94a3b8", fontSize: 13 }}>
+          <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
             This graph shows daily restaurant revenue for the last seven days.
             The X-axis represents days, while the Y-axis represents revenue in rupees.
           </p>
 
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={revenueData}>
-              <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
-              <XAxis dataKey="day" stroke="#cbd5e1" />
-              <YAxis stroke="#cbd5e1" />
+              <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" />
+              <XAxis dataKey="day" stroke="var(--text-muted)" />
+              <YAxis stroke="var(--text-muted)" />
               <Tooltip />
               <Legend />
               <Line
@@ -237,14 +238,15 @@ function Dashboard() {
 
         <div
           style={{
-            background: "#1e293b",
+            background: "var(--bg-card)",
             borderRadius: 18,
             padding: 20,
+            border: "1px solid var(--border-color)",
           }}
         >
           <h3>Order Status</h3>
 
-          <p style={{ color: "#94a3b8", fontSize: 13 }}>
+          <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
             Displays the percentage of orders that are completed, preparing,
             pending, or cancelled.
           </p>
@@ -276,16 +278,16 @@ function Dashboard() {
       >
         <h3>Top Selling Menu Items</h3>
 
-        <p style={{ color: "#94a3b8", fontSize: 13 }}>
+        <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
           This chart compares the number of times each menu item was sold.
           Higher bars indicate more customer demand.
         </p>
 
         <ResponsiveContainer width="100%" height={320}>
           <BarChart data={topItems}>
-            <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
-            <XAxis dataKey="item" stroke="#cbd5e1" />
-            <YAxis stroke="#cbd5e1" />
+            <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" />
+            <XAxis dataKey="item" stroke="var(--text-muted)" />
+            <YAxis stroke="var(--text-muted)" />
             <Tooltip />
             <Legend />
             <Bar dataKey="qty" fill="#ff7a00" name="Items Sold" radius={[6,6,0,0]} />
@@ -297,21 +299,22 @@ function Dashboard() {
 
       <div
         style={{
-          background: "#1e293b",
+          background: "var(--bg-card)",
           borderRadius: 18,
           padding: 20,
           marginTop: 24,
+          border: "1px solid var(--border-color)",
         }}
       >
         <h3>Recent Orders</h3>
 
-        <p style={{ color: "#94a3b8", fontSize: 13 }}>
+        <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
           Shows the latest customer orders with table number, status and bill amount.
         </p>
 
         <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 12 }}>
           <thead>
-            <tr style={{ color: "#94a3b8" }}>
+            <tr style={{ color: "var(--text-muted)" }}>
               <th align="left">Order ID</th>
               <th align="left">Table</th>
               <th align="left">Status</th>
@@ -321,7 +324,7 @@ function Dashboard() {
 
           <tbody>
             {orders.slice(0, 5).map((order) => (
-              <tr key={order.id} style={{ borderTop: "1px solid #334155" }}>
+              <tr key={order.id} style={{ borderTop: "1px solid var(--border-color)" }}>
                 <td style={{ padding: "12px 0" }}>{order.id}</td>
                 <td>{order.table}</td>
                 <td>{order.status}</td>
@@ -342,22 +345,22 @@ function Dashboard() {
           marginTop: 24,
         }}
       >
-        <div style={{ background: "#1e293b", borderRadius: 18, padding: 18 }}>
+        <div style={{ background: "var(--bg-card)", borderRadius: 18, padding: 18, border: "1px solid var(--border-color)" }}>
           <h4>Today's Sales</h4>
           <h2>₹{report.todaySales?.toLocaleString("en-IN")}</h2>
         </div>
 
-        <div style={{ background: "#1e293b", borderRadius: 18, padding: 18 }}>
+        <div style={{ background: "var(--bg-card)", borderRadius: 18, padding: 18, border: "1px solid var(--border-color)" }}>
           <h4>Weekly Sales</h4>
           <h2>₹{report.weeklySales?.toLocaleString("en-IN")}</h2>
         </div>
 
-        <div style={{ background: "#1e293b", borderRadius: 18, padding: 18 }}>
+        <div style={{ background: "var(--bg-card)", borderRadius: 18, padding: 18, border: "1px solid var(--border-color)" }}>
           <h4>Top Category</h4>
           <h2>{report.topCategory}</h2>
         </div>
 
-        <div style={{ background: "#1e293b", borderRadius: 18, padding: 18 }}>
+        <div style={{ background: "var(--bg-card)", borderRadius: 18, padding: 18, border: "1px solid var(--border-color)" }}>
           <h4>Trending Items</h4>
           <h2>{summary.topSelling?.join(", ") || "-"}</h2>
         </div>

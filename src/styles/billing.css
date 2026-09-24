@@ -1062,3 +1062,153 @@
     width: 100%;
   }
 }
+
+/* ==========================================================
+   BILLING POS - LIGHT THEME (White matlab sab white)
+   ========================================================== */
+.light-theme .billing-page-layout {
+  background: #f8fafc !important;
+}
+
+.light-theme .menu-section-container,
+.light-theme .cart-section {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
+}
+
+.light-theme .dish-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+.light-theme .dish-card:hover {
+  border-color: #f97316 !important;
+  box-shadow: 0 8px 18px rgba(249, 115, 22, 0.15) !important;
+}
+
+.light-theme .dish-title,
+.light-theme .dish-price {
+  color: #0f172a !important;
+}
+
+.light-theme .category-tag {
+  color: #64748b !important;
+}
+
+.light-theme .search-input-wrapper,
+.light-theme .food-type-filter,
+.light-theme .category-tab {
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #475569 !important;
+}
+
+.light-theme .search-input-wrapper input {
+  color: #0f172a !important;
+}
+
+.light-theme .search-input-wrapper input::placeholder {
+  color: #94a3b8 !important;
+}
+
+.light-theme .food-type-filter button {
+  color: #475569 !important;
+}
+
+.light-theme .food-type-filter button.active {
+  background: #f97316 !important;
+  color: #ffffff !important;
+}
+
+.light-theme .category-tab:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.light-theme .category-tab.active {
+  background: #f97316 !important;
+  color: #ffffff !important;
+  border-color: #f97316 !important;
+}
+
+.light-theme .order-type-tabs {
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.light-theme .order-type-tabs button {
+  color: #64748b !important;
+}
+
+.light-theme .order-type-tabs button.active {
+  background: #f97316 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25) !important;
+}
+
+.light-theme .action-icon-btn,
+.light-theme .offer-btn {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+.light-theme .action-icon-btn:hover,
+.light-theme .offer-btn:hover {
+  border-color: #f97316 !important;
+  color: #ea580c !important;
+  background: rgba(249, 115, 22, 0.08) !important;
+}
+
+.light-theme .cart-item-row {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.light-theme .item-title {
+  color: #0f172a !important;
+}
+
+.light-theme .item-qty-col {
+  background: #e2e8f0 !important;
+}
+
+.light-theme .qty-value {
+  color: #0f172a !important;
+}
+
+.light-theme .price-main {
+  color: #0f172a !important;
+}
+
+.light-theme .cart-table-header {
+  color: #64748b !important;
+  border-bottom-color: #e2e8f0 !important;
+}
+
+.light-theme .cart-input,
+.light-theme .disc-input,
+.light-theme .select-wrapper select {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.light-theme .radio-label,
+.light-theme .checkbox-label,
+.light-theme .sales-return-checkbox {
+  color: #1e293b !important;
+}
+
+.light-theme .quick-action-bar,
+.light-theme .cart-bottom-panel {
+  border-top-color: #e2e8f0 !important;
+  border-bottom-color: #e2e8f0 !important;
+}
+
+.light-theme .hold-item-card {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
