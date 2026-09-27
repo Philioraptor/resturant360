@@ -12,7 +12,15 @@ import {
   FaLink,
   FaTimes
 } from "react-icons/fa";
-import { getProducts, getCategories, createProduct, createCategory } from "../services/api";
+import {
+  getProducts,
+  getCategories,
+  createProduct,
+  createCategory,
+  updateCategory,
+  updateCategoryStatus,
+  deleteCategory as deleteCategoryAPI
+} from "../services/api";
 import "../styles/products.css";
 const COLOR_OPTIONS = [
   { name: "None", bg: "#f1f5f9", color: "#475569" },
@@ -69,6 +77,12 @@ function Products() {
     { id: 2, name: "Spice Level", selection: "Required", active: true }
   ]);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+const [categoryLoading, setCategoryLoading] = useState(false);
+
+
+
+
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [catName, setCatName] = useState("");
   const [catDesc, setCatDesc] = useState("");
@@ -87,27 +101,57 @@ function Products() {
   const [prodTrackInventory, setProdTrackInventory] = useState(false);
   const [prodActive, setProdActive] = useState(true);
   const [prodImageUrl, setProdImageUrl] = useState("");
-  const handleCreateCategory = async (e) => {
+  const handleSaveCategory = async (e) => {
     e.preventDefault();
     if (!catName.trim()) return;
-
     try {
-      const newCat = await createCategory({
-        name: catName.trim(),
-        description: catDesc.trim(),
-        color: catColor,
-        active: catActive,
-      });
-
-      setCategories((prev) => [...prev, newCat]);
-      setCatName("");
-      setCatDesc("");
-      setCatColor("None");
-      setCatActive(true);
-      setShowAddCategoryModal(false);
+      setCategoryLoading(true);
+      const payload = { name: catName.trim(), description: catDesc.trim(), color: catColor, active: catActive };
+      if (editingCategory) {
+        const categoryId = editingCategory.id ?? editingCategory._id;
+        const updatedCategory = await updateCategory(categoryId, payload);
+        setCategories((prev) => prev.map((category) =>
+          (category.id ?? category._id) === categoryId ? updatedCategory : category
+        ));
+      } else {
+        const newCat = await createCategory(payload);
+        setCategories((prev) => [...prev, newCat]);
+      }
+      setCatName(""); setCatDesc(""); setCatColor("None"); setCatActive(true);
+      setEditingCategory(null); setShowAddCategoryModal(false);
     } catch (error) {
-      console.error('Create category failed:', error);
-    }
+      console.error("Save category failed:", error);
+      alert(error.message || "Failed to save category.");
+    } finally { setCategoryLoading(false); }
+  };
+
+  const handleDeleteCategory = async (category) => {
+    const categoryId = category.id ?? category._id;
+    if (!categoryId) return alert("Category ID is missing.");
+    if (!window.confirm(`Are you sure you want to delete "${category.name}"?`)) return;
+    try {
+      setCategoryLoading(true);
+      await deleteCategoryAPI(categoryId);
+      setCategories((prev) => prev.filter((c) => (c.id ?? c._id) !== categoryId));
+    } catch (error) {
+      console.error("Delete category failed:", error);
+      alert(error.message || "Cannot delete this category because products are assigned to it.");
+    } finally { setCategoryLoading(false); }
+  };
+
+  const handleToggleCategoryStatus = async (category) => {
+    const categoryId = category.id ?? category._id;
+    if (!categoryId) return alert("Category ID is missing.");
+    try {
+      setCategoryLoading(true);
+      const updatedCategory = await updateCategoryStatus(categoryId, !category.active);
+      setCategories((prev) => prev.map((c) =>
+        (c.id ?? c._id) === categoryId ? updatedCategory : c
+      ));
+    } catch (error) {
+      console.error("Category status update failed:", error);
+      alert(error.message || "Failed to update category status.");
+    } finally { setCategoryLoading(false); }
   };
 
   const handleCreateProduct = async (e) => {
@@ -172,10 +216,6 @@ const newProd = await createProduct(payload);
       setProdSelectedTags([...prodSelectedTags, prodCustomTag.trim()]);
       setProdCustomTag("");
     }
-  };
-
-  const deleteCategory = (id) => {
-    setCategories(categories.filter((c) => c._id !== id));
   };
 
   const deleteProduct = (id) => {
@@ -359,7 +399,7 @@ const newProd = await createProduct(payload);
                 </tr>
               ) : (
                 categories.map((cat) => (
-                  <tr key={cat._id}>
+                  <tr key={cat.id ?? cat._id}>
                     <td style={{ fontWeight: 700 }}>{cat.name}</td>
                     <td>
                       {cat.color && cat.color !== "None" ? (
@@ -376,9 +416,9 @@ const newProd = await createProduct(payload);
                       )}
                     </td>
                     <td>
-                      <span className={`status-badge ${cat.active ? "active" : "inactive"}`}>
+                      <button type="button" disabled={categoryLoading} onClick={() => handleToggleCategoryStatus(cat)} className={`status-badge ${cat.active ? "active" : "inactive"}`}>
                         {cat.active ? "Active" : "Inactive"}
-                      </span>
+                      </button>
                     </td>
                     <td>
                       <div className="actions-cell">
@@ -398,7 +438,7 @@ const newProd = await createProduct(payload);
                         <button
                           className="icon-action-btn delete"
                           title="Delete Category"
-                          onClick={() => deleteCategory(cat._id)}
+                          onClick={() => handleDeleteCategory(cat)}
                         >
                           <FaTrash />
                         </button>
@@ -454,13 +494,13 @@ const newProd = await createProduct(payload);
         <div className="modal-overlay">
           <div className="modal-card">
             <div className="modal-title-row">
-              <h2>Add Category</h2>
+              <h2>{editingCategory ? "Edit Category" : "Add Category"}</h2>
               <button className="close-modal-x" onClick={() => setShowAddCategoryModal(false)}>
                 <FaTimes />
               </button>
             </div>
 
-            <form onSubmit={handleCreateCategory}>
+            <form onSubmit={handleSaveCategory}>
               <div className="form-group-block">
                 <label className="form-label">
                   Name <span className="required-star">*</span>
@@ -513,8 +553,8 @@ const newProd = await createProduct(payload);
                 </label>
               </div>
 
-              <button type="submit" className="modal-submit-btn">
-                Create
+              <button type="submit" className="modal-submit-btn" disabled={categoryLoading}>
+                {categoryLoading ? "Saving..." : editingCategory ? "Update Category" : "Create"}
               </button>
             </form>
           </div>
@@ -582,7 +622,7 @@ const newProd = await createProduct(payload);
                      required
                      >
   {categories.map((c) => (
-    <option key={c._id } value={c._id }>
+    <option key={c.id ?? c._id} value={c.id ?? c._id}>
       {c.name}
     </option>
   ))}

@@ -45,6 +45,22 @@ export const createProduct = (payload) =>
     method: 'POST',
     body: JSON.stringify(payload),
   });
+export const updateCategory = (categoryId, payload) =>
+  apiRequest(`/categories/${categoryId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+
+export const updateCategoryStatus = (categoryId, active) =>
+  apiRequest(`/categories/${categoryId}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ active }),
+  });
+
+export const deleteCategory = (categoryId) =>
+  apiRequest(`/categories/${categoryId}`, {
+    method: 'DELETE',
+  });
 
 export const createCategory = (payload) =>
   apiRequest('/categories', {
