@@ -91,6 +91,17 @@ export const advanceKdsTicket = (ticketId) =>
     method: 'PUT',
   });
 
+export const createKdsTicket = (payload) =>
+  apiRequest('/kds/tickets', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const deleteKdsTicket = (ticketId) =>
+  apiRequest(`/kds/tickets/${ticketId}`, {
+    method: 'DELETE',
+  });
+
 export default apiRequest;
 
 export const updateSettings = (payload) =>
