@@ -78,11 +78,7 @@ function Products() {
   ]);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
-const [categoryLoading, setCategoryLoading] = useState(false);
-
-
-
-
+  const [categoryLoading, setCategoryLoading] = useState(false); 
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [catName, setCatName] = useState("");
   const [catDesc, setCatDesc] = useState("");
