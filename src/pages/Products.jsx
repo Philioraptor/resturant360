@@ -19,7 +19,11 @@ import {
   createCategory,
   updateCategory,
   updateCategoryStatus,
-  deleteCategory as deleteCategoryAPI
+  deleteCategory as deleteCategoryAPI,
+  deleteProduct as deleteProductAPI,
+  getAddonGroups,
+  createAddonGroup,
+  deleteAddonGroup
 } from "../services/api";
 import "../styles/products.css";
 const COLOR_OPTIONS = [
@@ -59,8 +63,10 @@ function Products() {
       try {
         const productData = await getProducts();
         const categoryData = await getCategories();
+        const addonData = await getAddonGroups();
         setProducts(productData?.products || []);
         setCategories(categoryData || []);
+        setAddonGroups(addonData || []);
         if (categoryData.length) {
             setProdCategory(categoryData[0]._id || categoryData[0].id);
         }
@@ -72,10 +78,7 @@ function Products() {
 
     loadData();
   }, []);
-  const [addonGroups, setAddonGroups] = useState([
-    { id: 1, name: "Extra Cheese", selection: "Optional", active: true },
-    { id: 2, name: "Spice Level", selection: "Required", active: true }
-  ]);
+  const [addonGroups, setAddonGroups] = useState([]);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [categoryLoading, setCategoryLoading] = useState(false); 
@@ -214,9 +217,47 @@ const newProd = await createProduct(payload);
     }
   };
 
-  const deleteProduct = (id) => {
-  setProducts((prev) => prev.filter((p) => p._id !== id));
-};
+  const deleteProduct = async (id) => {
+    const productId = id;
+    if (!productId) return alert("Product ID is missing.");
+    if (!window.confirm("Are you sure you want to delete this product?")) return;
+    try {
+      await deleteProductAPI(productId);
+      setProducts((prev) => prev.filter((p) => (p._id ?? p.id) !== productId));
+    } catch (error) {
+      console.error("Delete product failed:", error);
+      alert(error.message || "Failed to delete product.");
+    }
+  };
+
+  const handleAddAddon = async () => {
+    const name = window.prompt("Enter new Addon Group name (e.g., Extra Toppings, Spice Level):");
+    if (!name || !name.trim()) return;
+    const isRequired = window.confirm("Is this addon group Required? (Click Cancel for Optional)");
+    try {
+      const created = await createAddonGroup({
+        name: name.trim(),
+        selection: isRequired ? "Required" : "Optional",
+        active: true,
+      });
+      setAddonGroups((prev) => [...prev, created]);
+    } catch (err) {
+      console.error("Create addon failed:", err);
+      alert(err.message || "Failed to create addon group.");
+    }
+  };
+
+  const handleDeleteAddon = async (id) => {
+    if (!id) return;
+    if (!window.confirm("Are you sure you want to delete this addon group?")) return;
+    try {
+      await deleteAddonGroup(id);
+      setAddonGroups((prev) => prev.filter((a) => (a._id ?? a.id) !== id));
+    } catch (err) {
+      console.error("Delete addon failed:", err);
+      alert(err.message || "Failed to delete addon group.");
+    }
+  };
 
   const exportCSV = () => {
     let csvContent = "data:text/csv;charset=utf-8,";
@@ -296,7 +337,7 @@ const newProd = await createProduct(payload);
             )}
 
             {activeTab === "addons" && (
-              <button className="add-main-btn" onClick={() => alert("Add Addon Group")}>
+              <button className="add-main-btn" onClick={handleAddAddon}>
                 + Add Addon Group
               </button>
             )}
@@ -360,7 +401,7 @@ const newProd = await createProduct(payload);
                         <button
                           className="icon-action-btn delete"
                           title="Delete Product"
-                          onClick={() => deleteProduct(prod._id)}
+                          onClick={() => deleteProduct(prod._id || prod.id)}
                         >
                           <FaTrash />
                         </button>
@@ -462,7 +503,7 @@ const newProd = await createProduct(payload);
             </thead>
             <tbody>
               {addonGroups.map((addon) => (
-                <tr key={addon.id}>
+                <tr key={addon._id || addon.id}>
                   <td style={{ fontWeight: 700 }}>{addon.name}</td>
                   <td>{addon.selection}</td>
                   <td>
@@ -470,10 +511,10 @@ const newProd = await createProduct(payload);
                   </td>
                   <td>
                     <div className="actions-cell">
-                      <button className="icon-action-btn" title="Edit">
+                      <button className="icon-action-btn" title="Edit" onClick={() => alert(`Addon: ${addon.name} (${addon.selection})`)}>
                         <FaEdit />
                       </button>
-                      <button className="icon-action-btn delete" title="Delete">
+                      <button className="icon-action-btn delete" title="Delete" onClick={() => handleDeleteAddon(addon._id || addon.id)}>
                         <FaTrash />
                       </button>
                     </div>

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import "../styles/tableLayout.css";
 import { useNavigate } from "react-router-dom";
-import { getTables, updateTableStatus } from "../services/api";
+import { getTables, updateTableStatus, createTable, deleteTable as deleteTableAPI } from "../services/api";
 
 const initialFloors = {
   "Ground Floor": [
@@ -115,46 +115,59 @@ const [newFloorName, setNewFloorName] = useState("");
 
 
 
-const addTable = () => {
+const addTable = async () => {
   const maxNumber = Object.values(floors)
     .flat()
     .reduce((max, table) => {
-      const num = parseInt(table.id.replace(/\D/g, "")) || 0;
+      const num = parseInt(String(table.id).replace(/\D/g, "")) || 0;
       return Math.max(max, num);
     }, 0);
 
-  const newTable = {
-    id: `T${maxNumber + 1}`,
+  const newTableId = `T${maxNumber + 1}`;
+  const payload = {
+    tableId: newTableId,
+    floor: activeFloor,
     seats: 4,
     status: "available",
   };
 
-  setFloors((prev) => ({
-    ...prev,
-    [activeFloor]: [...(prev[activeFloor] || []), newTable],
-  }));
+  try {
+    const created = await createTable(payload);
+    const newTable = {
+      id: created.id || created.tableId || newTableId,
+      seats: created.seats || 4,
+      status: created.status || "available",
+    };
 
-  setSelectedTableId(newTable.id);
+    setFloors((prev) => ({
+      ...prev,
+      [activeFloor]: [...(prev[activeFloor] || []), newTable],
+    }));
+
+    setSelectedTableId(newTable.id);
+  } catch (err) {
+    console.error("Create table failed:", err);
+    alert(err.message || "Failed to add table.");
+  }
 };
 
+const deleteTable = async () => {
+  if (!selectedTable) return;
 
+  const confirmDelete = window.confirm(
+    `Delete ${selectedTable.id}?`
+  );
 
-  const deleteTable = () => {
-    if (!selectedTable) return;
+  if (!confirmDelete) return;
 
-    const confirmDelete = window.confirm(
-      `Delete ${selectedTable.id}?`
-    );
-
-    if (!confirmDelete) return;
-
+  try {
+    await deleteTableAPI(selectedTable.id);
     const updatedTables = currentTables.filter(
       (table) => table.id !== selectedTable.id
     );
 
     setFloors((previous) => ({
       ...previous,
-
       [activeFloor]: updatedTables,
     }));
 
@@ -163,7 +176,11 @@ const addTable = () => {
         ? updatedTables[0].id
         : null
     );
-  };
+  } catch (err) {
+    console.error("Delete table failed:", err);
+    alert(err.message || "Failed to delete table.");
+  }
+};
 
 
 

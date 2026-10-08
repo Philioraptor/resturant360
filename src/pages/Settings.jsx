@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getSettings, updateSettings } from "../services/api";
 import "./Settings.css";
 
 function Settings() {
   const [activeTab, setActiveTab] = useState("restaurant");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const [restaurant, setRestaurant] = useState({
-    name: "shubham",
+    name: "Restaurant360",
     phone: "",
-    address: "sonai mumbai",
+    address: "",
     fssai: "",
     gstin: "",
   });
@@ -23,6 +26,39 @@ function Settings() {
     autoPrintKOT: true,
     printerName: "Kitchen Printer",
   });
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const data = await getSettings();
+        if (data) {
+          setRestaurant({
+            name: data.name || data.branchName || "Restaurant360",
+            phone: data.phone || "",
+            address: data.address || "",
+            fssai: data.fssai || "",
+            gstin: data.gstin || "",
+          });
+          setTaxSettings({
+            gst: String(data.gst || data.taxRate || "5"),
+            serviceCharge: String(data.serviceCharge || "0"),
+            packingCharge: String(data.packingCharge || "0"),
+          });
+          setPrinterSettings({
+            enabled: data.printerEnabled !== undefined ? data.printerEnabled : true,
+            autoPrintKOT: data.autoPrintKOT !== undefined ? data.autoPrintKOT : true,
+            printerName: data.printerName || "Kitchen Printer",
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load settings from MongoDB:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, []);
 
   const handleRestaurantChange = (e) => {
     const { name, value } = e.target;
@@ -42,8 +78,33 @@ function Settings() {
     }));
   };
 
-  const handleSave = () => {
-    alert("Settings saved successfully!");
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      const payload = {
+        name: restaurant.name,
+        branchName: restaurant.name,
+        phone: restaurant.phone,
+        address: restaurant.address,
+        fssai: restaurant.fssai,
+        gstin: restaurant.gstin,
+        taxRate: Number(taxSettings.gst) || 5,
+        gst: taxSettings.gst,
+        serviceCharge: taxSettings.serviceCharge,
+        packingCharge: taxSettings.packingCharge,
+        printerEnabled: printerSettings.enabled,
+        autoPrintKOT: printerSettings.autoPrintKOT,
+        printerName: printerSettings.printerName,
+      };
+
+      await updateSettings(payload);
+      alert("Settings saved to MongoDB successfully!");
+    } catch (err) {
+      console.error("Save settings failed:", err);
+      alert("Failed to save settings: " + (err.message || "Unknown error"));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
