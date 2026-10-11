@@ -31,6 +31,7 @@ function CartSection({ cartItems, setCartItems, addToCart }) {
   const [isAcActive, setIsAcActive] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptCartCopy, setReceiptCartCopy] = useState([]);
+  const [receiptTotal, setReceiptTotal] = useState(0);
   const [isKotOnly, setIsKotOnly] = useState(false);
   const [showSplitModal, setShowSplitModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -82,6 +83,7 @@ function CartSection({ cartItems, setCartItems, addToCart }) {
 
     const currentItemsCopy = [...cartItems];
     setReceiptCartCopy(currentItemsCopy);
+    setReceiptTotal(computedTotal);
 
     try {
       const orderPayload = {
@@ -456,7 +458,7 @@ function CartSection({ cartItems, setCartItems, addToCart }) {
         isOpen={showReceipt}
         onClose={() => setShowReceipt(false)}
         cartItems={receiptCartCopy.length > 0 ? receiptCartCopy : cartItems}
-        total={computedTotal}
+        total={receiptTotal > 0 ? receiptTotal : computedTotal}
         orderType={orderType}
         table={table}
         paymentMethod={paymentMethod}

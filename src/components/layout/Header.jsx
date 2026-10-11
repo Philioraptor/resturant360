@@ -54,7 +54,29 @@ function Header({ isDarkMode, setIsDarkMode }) {
     setNotifications(notifications.map((n) => ({ ...n, unread: false })));
   };
 
-  const unreadCount = notifications.filter((n) => n.unread).length;
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem("res360_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const handleLogout = () => {
+    localStorage.removeItem("res360_token");
+    localStorage.removeItem("res360_user");
+    window.location.href = "/login";
+  };
+
+  const getInitials = (name) => {
+    if (!name) return "AD";
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
 
   return (
     <header className="header">
@@ -189,12 +211,37 @@ function Header({ isDarkMode, setIsDarkMode }) {
         </div>
 
 
-        <div className="user-profile">
-          <div className="avatar-circle">CA</div>
-          <div className="user-info">
-            <span className="user-name">cashier1</span>
-            <span className="user-role">Cashier</span>
+        <div className="user-profile" title={currentUser?.email || "User Profile"}>
+          <div className="avatar-circle">
+            {getInitials(currentUser?.name)}
           </div>
+          <div className="user-info">
+            <span className="user-name">{currentUser?.name || "Admin"}</span>
+            <span className="user-role" style={{ textTransform: "capitalize" }}>
+              {currentUser?.role || "Owner"}
+            </span>
+          </div>
+          <button
+            onClick={handleLogout}
+            title="Log out"
+            style={{
+              background: "rgba(239, 68, 68, 0.12)",
+              color: "#ef4444",
+              border: "1px solid rgba(239, 68, 68, 0.25)",
+              padding: "5px 9px",
+              borderRadius: "8px",
+              fontSize: "11px",
+              fontWeight: "600",
+              cursor: "pointer",
+              marginLeft: "6px",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              transition: "all 0.2s"
+            }}
+          >
+            Logout
+          </button>
         </div>
       </div>
     </header>

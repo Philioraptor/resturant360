@@ -10,6 +10,17 @@ function ReceiptModal({ isOpen, onClose, cartItems, total, orderType, table, pay
   const orderId = "ORD-" + Math.floor(100000 + Math.random() * 900000);
   const now = new Date().toLocaleString();
 
+  const itemsList = Array.isArray(cartItems) ? cartItems : [];
+  const itemsSubtotal = itemsList.reduce(
+    (acc, i) => acc + (Number(i.price) || 0) * (Number(i.qty) || 1),
+    0
+  );
+  const grandTotal =
+    total !== undefined && total !== null && Number(total) > 0
+      ? Number(total)
+      : itemsSubtotal;
+  const taxesAndCharges = Math.max(0, grandTotal - itemsSubtotal);
+
   return (
     <div className="modal-overlay">
       <div className="modal-content receipt-modal-content">
@@ -48,11 +59,11 @@ function ReceiptModal({ isOpen, onClose, cartItems, total, orderType, table, pay
               </tr>
             </thead>
             <tbody>
-              {cartItems.map((item) => (
-                <tr key={item.id}>
+              {itemsList.map((item, idx) => (
+                <tr key={item.id || item._id || idx}>
                   <td>{item.name}</td>
                   <td style={{ textAlign: "center" }}>{item.qty}</td>
-                  <td style={{ textAlign: "right" }}>₹{(item.price * item.qty).toFixed(2)}</td>
+                  <td style={{ textAlign: "right" }}>₹{((Number(item.price) || 0) * (Number(item.qty) || 1)).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -65,19 +76,19 @@ function ReceiptModal({ isOpen, onClose, cartItems, total, orderType, table, pay
             <div className="receipt-summary">
               <div className="summary-row">
                 <span>Subtotal:</span>
-                <span>₹{cartItems.reduce((acc, i) => acc + i.price * i.qty, 0).toFixed(2)}</span>
+                <span>₹{itemsSubtotal.toFixed(2)}</span>
               </div>
               <div className="summary-row">
                 <span>Taxes & Charges:</span>
-                <span>₹{(total - cartItems.reduce((acc, i) => acc + i.price * i.qty, 0)).toFixed(2)}</span>
+                <span>₹{taxesAndCharges.toFixed(2)}</span>
               </div>
               <div className="summary-row grand-total">
                 <strong>GRAND TOTAL:</strong>
-                <strong>₹{total.toFixed(2)}</strong>
+                <strong>₹{grandTotal.toFixed(2)}</strong>
               </div>
               <div className="summary-row">
                 <span>Payment Mode:</span>
-                <span>{paymentMethod}</span>
+                <span>{paymentMethod || "Cash"}</span>
               </div>
             </div>
           )}
