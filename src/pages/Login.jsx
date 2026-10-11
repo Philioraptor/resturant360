@@ -31,7 +31,7 @@ function Login({ onLoginSuccess }) {
         onLoginSuccess(res.user);
       }
 
-      navigate("/");
+      window.location.href = "/";
     } catch (err) {
       console.error("Login failed:", err);
       setError(err.message || "Invalid credentials. Please try again.");
