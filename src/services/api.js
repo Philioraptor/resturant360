@@ -42,6 +42,22 @@ export const registerUser = (payload) =>
 
 export const getCurrentUser = () => apiRequest('/auth/me');
 
+export const purchaseLicense = (payload) =>
+  apiRequest('/license/purchase', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const redeemLicense = (licenseKey) =>
+  apiRequest('/license/redeem', {
+    method: 'POST',
+    body: JSON.stringify({ licenseKey }),
+  });
+
+export const getLicenseStatus = () => apiRequest('/license/status');
+
+export const getMyLicenses = () => apiRequest('/license/my-keys');
+
 export const getMenu = () => apiRequest('/menu');
 export const getDashboardSummary = () => apiRequest('/dashboard');
 export const getProducts = () => apiRequest('/products');

@@ -8,8 +8,10 @@ import {
   FaBell,
   FaCheck,
   FaChevronDown,
-  FaCheckDouble
+  FaCheckDouble,
+  FaShieldAlt,
 } from "react-icons/fa";
+import LicenseModal from "../common/LicenseModal";
 import "../../styles/header.css";
 
 
@@ -78,6 +80,11 @@ function Header({ isDarkMode, setIsDarkMode }) {
     return name.slice(0, 2).toUpperCase();
   };
 
+  const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
+
+  const isExpired = currentUser?.isExpired || currentUser?.subscriptionStatus === "expired";
+  const daysLeft = currentUser?.daysRemaining ?? 14;
+
   return (
     <header className="header">
 
@@ -88,6 +95,39 @@ function Header({ isDarkMode, setIsDarkMode }) {
 
 
       <div className="header-right">
+
+        {/* License & Subscription Status Pill */}
+        <button
+          onClick={() => setIsLicenseModalOpen(true)}
+          title="Click to view subscription or recharge license"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "6px 12px",
+            borderRadius: "20px",
+            fontSize: "12px",
+            fontWeight: "700",
+            cursor: "pointer",
+            border: isExpired
+              ? "1px solid rgba(239, 68, 68, 0.4)"
+              : "1px solid rgba(249, 115, 22, 0.4)",
+            background: isExpired
+              ? "rgba(239, 68, 68, 0.12)"
+              : "rgba(249, 115, 22, 0.12)",
+            color: isExpired ? "#ef4444" : "#f97316",
+            transition: "all 0.2s ease",
+          }}
+        >
+          <FaShieldAlt />
+          <span>
+            {isExpired
+              ? "License Expired"
+              : currentUser?.subscriptionPlan
+              ? `${currentUser.subscriptionPlan.toUpperCase()} • ${daysLeft}d`
+              : `Trial • ${daysLeft}d`}
+          </span>
+        </button>
 
         <button
           className={`status-pill ${isOnline ? "online" : "offline"}`}
@@ -244,6 +284,22 @@ function Header({ isDarkMode, setIsDarkMode }) {
           </button>
         </div>
       </div>
+
+      <LicenseModal
+        isOpen={isLicenseModalOpen}
+        onClose={() => setIsLicenseModalOpen(false)}
+        onLicenseUpdated={(newDetails) => {
+          setCurrentUser((prev) => ({
+            ...prev,
+            subscriptionStatus: newDetails.subscriptionStatus,
+            subscriptionPlan: newDetails.subscriptionPlan,
+            licenseExpiresAt: newDetails.licenseExpiresAt,
+            licenseKey: newDetails.licenseKey,
+            daysRemaining: newDetails.daysRemaining,
+            isExpired: false,
+          }));
+        }}
+      />
     </header>
   );
 }
