@@ -252,7 +252,7 @@ function LicenseModal({ isOpen, onClose, onLicenseUpdated }) {
           <div style={{ display: "flex", gap: "10px", marginBottom: "14px" }}>
             <input
               type="text"
-              placeholder="e.g. RES360-A1B2-C3D4-E5F6"
+              placeholder="e.g. R360-A1B2-C3D4"
               value={licenseKeyInput}
               onChange={(e) => setLicenseKeyInput(e.target.value.toUpperCase())}
               style={{

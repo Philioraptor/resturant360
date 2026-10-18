@@ -588,13 +588,13 @@ function Settings() {
           <div style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid var(--border-color)", borderRadius: "12px", padding: "20px", marginBottom: "20px" }}>
             <h4 style={{ margin: "0 0 6px", fontSize: "15px" }}>Recharge with License Key</h4>
             <p style={{ margin: "0 0 16px", fontSize: "13px", color: "var(--text-sub, #94a3b8)" }}>
-              Purchased a subscription from the Restaurant360 Portfolio? Enter your 16-character license key below to activate or extend your validity.
+              Generated a subscription key from the Restaurant360 Portfolio? Enter your 12-character license key below to activate or extend your validity.
             </p>
 
             <form onSubmit={handleRedeemLicense} style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
               <input
                 type="text"
-                placeholder="RES360-XXXX-XXXX-XXXX"
+                placeholder="e.g. R360-A1B2-C3D4"
                 value={licenseKeyInput}
                 onChange={(e) => setLicenseKeyInput(e.target.value.toUpperCase())}
                 style={{
