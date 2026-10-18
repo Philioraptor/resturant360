@@ -1,10 +1,12 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 async function apiRequest(endpoint, options = {}) {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('res360_token') : null;
   const config = {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
   };
@@ -25,6 +27,36 @@ async function apiRequest(endpoint, options = {}) {
   const result = await response.json();
   return result.data ?? result;
 }
+
+export const loginUser = (payload) =>
+  apiRequest('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const registerUser = (payload) =>
+  apiRequest('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const getCurrentUser = () => apiRequest('/auth/me');
+
+export const purchaseLicense = (payload) =>
+  apiRequest('/license/purchase', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const redeemLicense = (licenseKey) =>
+  apiRequest('/license/redeem', {
+    method: 'POST',
+    body: JSON.stringify({ licenseKey }),
+  });
+
+export const getLicenseStatus = () => apiRequest('/license/status');
+
+export const getMyLicenses = () => apiRequest('/license/my-keys');
 
 export const getMenu = () => apiRequest('/menu');
 export const getDashboardSummary = () => apiRequest('/dashboard');

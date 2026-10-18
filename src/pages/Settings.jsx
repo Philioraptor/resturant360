@@ -1,11 +1,17 @@
 import { useState, useEffect } from "react";
-import { getSettings, updateSettings } from "../services/api";
+import { getSettings, updateSettings, redeemLicense, getLicenseStatus } from "../services/api";
 import "./Settings.css";
 
 function Settings() {
   const [activeTab, setActiveTab] = useState("restaurant");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // License state
+  const [licenseData, setLicenseData] = useState(null);
+  const [licenseKeyInput, setLicenseKeyInput] = useState("");
+  const [redeemLoading, setRedeemLoading] = useState(false);
+  const [redeemMessage, setRedeemMessage] = useState({ type: "", text: "" });
 
   const [restaurant, setRestaurant] = useState({
     name: "Restaurant360",
@@ -57,8 +63,57 @@ function Settings() {
       }
     };
 
+    const loadLicense = async () => {
+      try {
+        const lic = await getLicenseStatus();
+        if (lic) setLicenseData(lic);
+      } catch (err) {
+        console.error("Failed to load license:", err);
+      }
+    };
+
     loadSettings();
+    loadLicense();
   }, []);
+
+  const handleRedeemLicense = async (e) => {
+    e.preventDefault();
+    if (!licenseKeyInput.trim()) {
+      setRedeemMessage({ type: "error", text: "Please enter your license key." });
+      return;
+    }
+
+    try {
+      setRedeemLoading(true);
+      setRedeemMessage({ type: "", text: "" });
+      const res = await redeemLicense(licenseKeyInput.trim());
+      setRedeemMessage({ type: "success", text: res.message || "License activated successfully!" });
+      
+      // Update local storage user
+      try {
+        const saved = localStorage.getItem("res360_user");
+        if (saved) {
+          const u = JSON.parse(saved);
+          u.subscriptionStatus = res.subscriptionStatus;
+          u.subscriptionPlan = res.subscriptionPlan;
+          u.licenseExpiresAt = res.licenseExpiresAt;
+          u.licenseKey = res.licenseKey;
+          u.daysRemaining = res.daysRemaining;
+          localStorage.setItem("res360_user", JSON.stringify(u));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+
+      setLicenseKeyInput("");
+      const updated = await getLicenseStatus();
+      if (updated) setLicenseData(updated);
+    } catch (err) {
+      setRedeemMessage({ type: "error", text: err.message || "Failed to redeem key." });
+    } finally {
+      setRedeemLoading(false);
+    }
+  };
 
   const handleRestaurantChange = (e) => {
     const { name, value } = e.target;
@@ -157,6 +212,16 @@ function Settings() {
         >
           <span>▤</span>
           Database & Sync
+        </button>
+
+        <button
+          className={`settings-tab ${
+            activeTab === "license" ? "active" : ""
+          }`}
+          onClick={() => setActiveTab("license")}
+        >
+          <span>🛡️</span>
+          Subscription & License
         </button>
 
       </div>
@@ -442,6 +507,146 @@ function Settings() {
 
           </div>
 
+        </div>
+      )}
+
+      {/* Subscription & License Tab */}
+      {activeTab === "license" && (
+        <div className="settings-card">
+          <div className="card-heading">
+            <div>
+              <h2>Subscription & Software License</h2>
+              <p>Manage your restaurant license key, plan validity, and recharge coupons.</p>
+            </div>
+          </div>
+
+          {/* Current Status Banner */}
+          <div
+            style={{
+              padding: "18px 20px",
+              borderRadius: "14px",
+              marginBottom: "24px",
+              background: licenseData?.isExpired ? "rgba(239, 68, 68, 0.1)" : "rgba(34, 197, 94, 0.1)",
+              border: licenseData?.isExpired ? "1px solid rgba(239, 68, 68, 0.25)" : "1px solid rgba(34, 197, 94, 0.25)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "12px",
+            }}
+          >
+            <div>
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: "700",
+                  textTransform: "uppercase",
+                  padding: "3px 8px",
+                  borderRadius: "6px",
+                  background: licenseData?.isExpired ? "#ef4444" : "#22c55e",
+                  color: "#fff",
+                }}
+              >
+                {licenseData?.isExpired ? "EXPIRED" : "ACTIVE"}
+              </span>
+              <h3 style={{ margin: "6px 0 2px", fontSize: "18px", color: "var(--text-main, #f8fafc)", textTransform: "capitalize" }}>
+                {licenseData?.subscriptionPlan ? `${licenseData.subscriptionPlan} Plan` : "14-Day Free Trial"}
+              </h3>
+              <p style={{ margin: 0, fontSize: "13px", color: "var(--text-sub, #94a3b8)" }}>
+                Active License Key: <strong style={{ color: "#f97316", fontFamily: "monospace" }}>{licenseData?.licenseKey || "TRIAL"}</strong>
+              </p>
+            </div>
+
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "24px", fontWeight: "800", color: licenseData?.isExpired ? "#ef4444" : "#22c55e" }}>
+                {licenseData?.daysRemaining ?? 0} <span style={{ fontSize: "14px", fontWeight: "600" }}>Days Left</span>
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--text-sub, #94a3b8)" }}>
+                {licenseData?.licenseExpiresAt ? `Expires: ${new Date(licenseData.licenseExpiresAt).toLocaleDateString()}` : ""}
+              </div>
+            </div>
+          </div>
+
+          {/* Feedback Message */}
+          {redeemMessage.text && (
+            <div
+              style={{
+                padding: "12px 16px",
+                borderRadius: "10px",
+                fontSize: "13.5px",
+                marginBottom: "20px",
+                background: redeemMessage.type === "success" ? "rgba(34, 197, 94, 0.15)" : "rgba(239, 68, 68, 0.15)",
+                color: redeemMessage.type === "success" ? "#22c55e" : "#ef4444",
+                border: redeemMessage.type === "success" ? "1px solid rgba(34, 197, 94, 0.3)" : "1px solid rgba(239, 68, 68, 0.3)",
+              }}
+            >
+              {redeemMessage.text}
+            </div>
+          )}
+
+          {/* Recharge Section */}
+          <div style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid var(--border-color)", borderRadius: "12px", padding: "20px", marginBottom: "20px" }}>
+            <h4 style={{ margin: "0 0 6px", fontSize: "15px" }}>Recharge with License Key</h4>
+            <p style={{ margin: "0 0 16px", fontSize: "13px", color: "var(--text-sub, #94a3b8)" }}>
+              Generated a subscription key from the Restaurant360 Portfolio? Enter your 12-character license key below to activate or extend your validity.
+            </p>
+
+            <form onSubmit={handleRedeemLicense} style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <input
+                type="text"
+                placeholder="e.g. R360-A1B2-C3D4"
+                value={licenseKeyInput}
+                onChange={(e) => setLicenseKeyInput(e.target.value.toUpperCase())}
+                style={{
+                  flex: "1 1 280px",
+                  padding: "12px 14px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-color)",
+                  background: "var(--bg-input, #0f172a)",
+                  color: "#fff",
+                  fontSize: "14px",
+                  fontFamily: "monospace",
+                  letterSpacing: "1px",
+                }}
+              />
+              <button
+                type="submit"
+                disabled={redeemLoading}
+                className="save-button"
+                style={{ margin: 0, padding: "0 22px" }}
+              >
+                {redeemLoading ? "Verifying..." : "Apply License Key"}
+              </button>
+            </form>
+          </div>
+
+          {/* Link to Buy / Renew on Portfolio */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px", background: "rgba(249, 115, 22, 0.06)", border: "1px dashed rgba(249, 115, 22, 0.3)", borderRadius: "12px" }}>
+            <div>
+              <strong style={{ color: "#f97316", fontSize: "14px" }}>Need to buy or renew your license?</strong>
+              <p style={{ margin: "4px 0 0", fontSize: "12.5px", color: "var(--text-sub, #94a3b8)" }}>
+                Visit our official pricing portal to choose a Monthly, Yearly, or Enterprise package.
+              </p>
+            </div>
+            <a
+              href="http://localhost:5174/#pricing-section"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                background: "linear-gradient(135deg, #f97316, #ea580c)",
+                color: "#ffffff",
+                padding: "9px 16px",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: "700",
+                textDecoration: "none",
+                display: "inline-block",
+                boxShadow: "0 4px 12px rgba(249, 115, 22, 0.25)",
+              }}
+            >
+              Open Portfolio & Renew →
+            </a>
+          </div>
         </div>
       )}
 
