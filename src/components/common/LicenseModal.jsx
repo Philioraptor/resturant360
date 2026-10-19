@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { FaKey, FaShieldAlt, FaCheckCircle, FaExclamationTriangle, FaTimes, FaExternalLinkAlt } from "react-icons/fa";
 import { redeemLicense, getLicenseStatus } from "../../services/api";
 
-function LicenseModal({ isOpen, onClose, onLicenseUpdated }) {
+function LicenseModal({ isOpen, onClose, onLicenseUpdated, isForced = false }) {
   const [licenseKeyInput, setLicenseKeyInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -96,7 +96,7 @@ function LicenseModal({ isOpen, onClose, onLicenseUpdated }) {
         zIndex: 99999,
         padding: "16px",
       }}
-      onClick={onClose}
+      onClick={isForced ? undefined : onClose}
     >
       <div
         style={{
@@ -112,28 +112,54 @@ function LicenseModal({ isOpen, onClose, onLicenseUpdated }) {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          style={{
-            position: "absolute",
-            top: "18px",
-            right: "18px",
-            background: "rgba(255, 255, 255, 0.08)",
-            border: "none",
-            color: "var(--text-sub, #94a3b8)",
-            width: "32px",
-            height: "32px",
-            borderRadius: "50%",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "14px",
-          }}
-        >
-          <FaTimes />
-        </button>
+        {/* Close Button / Logout Button */}
+        {isForced ? (
+          <button
+            onClick={() => {
+              localStorage.removeItem("res360_token");
+              localStorage.removeItem("res360_user");
+              window.location.href = "/login";
+            }}
+            title="Log out of current account"
+            style={{
+              position: "absolute",
+              top: "18px",
+              right: "18px",
+              background: "rgba(239, 68, 68, 0.15)",
+              border: "1px solid rgba(239, 68, 68, 0.35)",
+              color: "#ef4444",
+              padding: "5px 12px",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontWeight: "700",
+            }}
+          >
+            Logout
+          </button>
+        ) : (
+          <button
+            onClick={onClose}
+            style={{
+              position: "absolute",
+              top: "18px",
+              right: "18px",
+              background: "rgba(255, 255, 255, 0.08)",
+              border: "none",
+              color: "var(--text-sub, #94a3b8)",
+              width: "32px",
+              height: "32px",
+              borderRadius: "50%",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "14px",
+            }}
+          >
+            <FaTimes />
+          </button>
+        )}
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>

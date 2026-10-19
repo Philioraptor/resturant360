@@ -1,27 +1,67 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaUtensils, FaLock, FaEnvelope, FaUserShield, FaSignInAlt } from "react-icons/fa";
+import { FaUtensils, FaLock, FaEnvelope, FaUserShield, FaSignInAlt, FaEye, FaEyeSlash, FaInfoCircle } from "react-icons/fa";
 import { loginUser } from "../services/api";
 
 function Login({ onLoginSuccess }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [sessionExpiredMsg, setSessionExpiredMsg] = useState("");
+  const [lockoutTimer, setLockoutTimer] = useState(0);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("session") === "expired") {
+      setSessionExpiredMsg("Your session has expired. Please log in again to continue.");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (lockoutTimer > 0) {
+      const timer = setTimeout(() => setLockoutTimer((t) => t - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [lockoutTimer]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+    setSessionExpiredMsg("");
 
-    if (!email.trim() || !password.trim()) {
-      setError("Please fill in both email and password.");
+    if (lockoutTimer > 0) {
+      setError(`Please wait ${lockoutTimer} seconds before trying again.`);
+      return;
+    }
+
+    // Client-side email format regex check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setError("Please enter your restaurant email.");
+      return;
+    }
+    if (!emailRegex.test(cleanEmail)) {
+      setError("Please enter a valid email address (e.g. admin@restaurant360.com).");
+      return;
+    }
+
+    if (!password.trim()) {
+      setError("Please enter your password.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long.");
       return;
     }
 
     try {
       setLoading(true);
-      const res = await loginUser({ email, password });
+      const res = await loginUser({ email: cleanEmail, password });
 
       // Save token and user details to localStorage
       localStorage.setItem("res360_token", res.token);
@@ -34,7 +74,12 @@ function Login({ onLoginSuccess }) {
       window.location.href = "/";
     } catch (err) {
       console.error("Login failed:", err);
-      setError(err.message || "Invalid credentials. Please try again.");
+      const msg = err.message || "Invalid credentials. Please try again.";
+      setError(msg);
+
+      if (msg.includes("locked") || msg.includes("failed")) {
+        setLockoutTimer(30);
+      }
     } finally {
       setLoading(false);
     }
@@ -101,6 +146,26 @@ function Login({ onLoginSuccess }) {
             Enterprise POS & Restaurant Management Portal
           </p>
         </div>
+
+        {/* Session Expired Banner */}
+        {sessionExpiredMsg && (
+          <div
+            style={{
+              background: "rgba(249, 115, 22, 0.15)",
+              border: "1px solid #f97316",
+              borderRadius: "10px",
+              padding: "10px 14px",
+              color: "#fb923c",
+              fontSize: "13px",
+              marginBottom: "18px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <FaInfoCircle /> <span>{sessionExpiredMsg}</span>
+          </div>
+        )}
 
         {/* Error Alert */}
         {error && (
@@ -178,14 +243,14 @@ function Login({ onLoginSuccess }) {
                 <FaLock />
               </span>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 style={{
                   width: "100%",
-                  padding: "12px 14px 12px 42px",
+                  padding: "12px 44px 12px 42px",
                   background: "#1f2937",
                   border: "1px solid #374151",
                   borderRadius: "10px",
@@ -195,31 +260,59 @@ function Login({ onLoginSuccess }) {
                   boxSizing: "border-box",
                 }}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                title={showPassword ? "Hide password" : "Show password"}
+                style={{
+                  position: "absolute",
+                  right: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "transparent",
+                  border: "none",
+                  color: "#9ca3af",
+                  cursor: "pointer",
+                  fontSize: "15px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "4px",
+                }}
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
             </div>
           </div>
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || lockoutTimer > 0}
             style={{
               width: "100%",
               padding: "13px",
-              background: "linear-gradient(135deg, #ff7a00, #ea580c)",
+              background: lockoutTimer > 0
+                ? "#4b5563"
+                : "linear-gradient(135deg, #ff7a00, #ea580c)",
               border: "none",
               borderRadius: "10px",
               color: "#fff",
               fontSize: "15px",
               fontWeight: "700",
-              cursor: loading ? "not-allowed" : "pointer",
+              cursor: (loading || lockoutTimer > 0) ? "not-allowed" : "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               gap: "8px",
-              boxShadow: "0 10px 20px -5px rgba(255, 122, 0, 0.4)",
+              boxShadow: lockoutTimer > 0 ? "none" : "0 10px 20px -5px rgba(255, 122, 0, 0.4)",
             }}
           >
             <FaSignInAlt />
-            {loading ? "Authenticating..." : "Sign In to Restaurant360"}
+            {loading
+              ? "Authenticating..."
+              : lockoutTimer > 0
+              ? `Locked (${lockoutTimer}s)`
+              : "Sign In to Restaurant360"}
           </button>
         </form>
 
