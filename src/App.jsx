@@ -20,6 +20,44 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+function RoleRoute({ allowedRoles, children }) {
+  const user = (() => {
+    try {
+      const u = localStorage.getItem("res360_user");
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const role = user?.role || "admin";
+
+  if (allowedRoles && !allowedRoles.includes(role)) {
+    if (role === "kitchen") return <Navigate to="/kds" replace />;
+    if (role === "waiter") return <Navigate to="/tables" replace />;
+    return <Navigate to="/billing" replace />;
+  }
+
+  return children;
+}
+
+function DashboardHome() {
+  const user = (() => {
+    try {
+      const u = localStorage.getItem("res360_user");
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const role = user?.role || "admin";
+  if (role === "kitchen") return <Navigate to="/kds" replace />;
+  if (role === "waiter") return <Navigate to="/tables" replace />;
+
+  return <Dashboard />;
+}
+
 function App() {
   return (
     <Router>
@@ -31,16 +69,99 @@ function App() {
             <ProtectedRoute>
               <DashboardLayout>
                 <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/billing" element={<Billing />} />
-                  <Route path="/products" element={<Products />} />
-                  <Route path="/tables" element={<Tables />} />
-                  <Route path="/kds" element={<KDS />} />
-                  <Route path="/inventory" element={<Inventory />} />
-                  <Route path="/customers" element={<Customers />} />
-                  <Route path="/reports" element={<Reports />} />
-                  <Route path="/ai-chatbot" element={<AIChatbot />} />
-                  <Route path="/settings" element={<Settings />} />
+                  {/* Root Overview: Admins, Managers, Cashiers */}
+                  <Route path="/" element={<DashboardHome />} />
+
+                  {/* POS Billing: Admins, Managers, Cashiers, Waiters */}
+                  <Route
+                    path="/billing"
+                    element={
+                      <RoleRoute allowedRoles={["admin", "manager", "cashier", "waiter"]}>
+                        <Billing />
+                      </RoleRoute>
+                    }
+                  />
+
+                  {/* Tables: Admins, Managers, Cashiers, Waiters */}
+                  <Route
+                    path="/tables"
+                    element={
+                      <RoleRoute allowedRoles={["admin", "manager", "cashier", "waiter"]}>
+                        <Tables />
+                      </RoleRoute>
+                    }
+                  />
+
+                  {/* KDS (Kitchen Display System): Admins, Managers, Cashiers, Kitchen */}
+                  <Route
+                    path="/kds"
+                    element={
+                      <RoleRoute allowedRoles={["admin", "manager", "cashier", "kitchen"]}>
+                        <KDS />
+                      </RoleRoute>
+                    }
+                  />
+
+                  {/* Customers: Admins, Managers, Cashiers */}
+                  <Route
+                    path="/customers"
+                    element={
+                      <RoleRoute allowedRoles={["admin", "manager", "cashier"]}>
+                        <Customers />
+                      </RoleRoute>
+                    }
+                  />
+
+                  {/* Menu & Products: Admin & Manager Only */}
+                  <Route
+                    path="/products"
+                    element={
+                      <RoleRoute allowedRoles={["admin", "manager"]}>
+                        <Products />
+                      </RoleRoute>
+                    }
+                  />
+
+                  {/* Stock & Inventory: Admin & Manager Only */}
+                  <Route
+                    path="/inventory"
+                    element={
+                      <RoleRoute allowedRoles={["admin", "manager"]}>
+                        <Inventory />
+                      </RoleRoute>
+                    }
+                  />
+
+                  {/* Analytics & Reports: Admin & Manager Only */}
+                  <Route
+                    path="/reports"
+                    element={
+                      <RoleRoute allowedRoles={["admin", "manager"]}>
+                        <Reports />
+                      </RoleRoute>
+                    }
+                  />
+
+                  {/* AI Analyst Chatbot: Admin & Manager Only */}
+                  <Route
+                    path="/ai-chatbot"
+                    element={
+                      <RoleRoute allowedRoles={["admin", "manager"]}>
+                        <AIChatbot />
+                      </RoleRoute>
+                    }
+                  />
+
+                  {/* Settings: Admin & Manager Only */}
+                  <Route
+                    path="/settings"
+                    element={
+                      <RoleRoute allowedRoles={["admin", "manager"]}>
+                        <Settings />
+                      </RoleRoute>
+                    }
+                  />
+
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </DashboardLayout>
@@ -53,4 +174,3 @@ function App() {
 }
 
 export default App;
-

@@ -1,14 +1,34 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaUtensils, FaLock, FaEnvelope, FaUserShield, FaSignInAlt, FaEye, FaEyeSlash, FaInfoCircle } from "react-icons/fa";
-import { loginUser } from "../services/api";
+import {
+  FaUtensils,
+  FaLock,
+  FaEnvelope,
+  FaUserShield,
+  FaSignInAlt,
+  FaEye,
+  FaEyeSlash,
+  FaInfoCircle,
+  FaStore,
+  FaUser,
+  FaKey,
+  FaCheckCircle,
+  FaCashRegister,
+  FaFire
+} from "react-icons/fa";
+import { loginUser, registerUser } from "../services/api";
 
 function Login({ onLoginSuccess }) {
+  const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [restaurantName, setRestaurantName] = useState("");
+  const [licenseKey, setLicenseKey] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const [sessionExpiredMsg, setSessionExpiredMsg] = useState("");
   const [lockoutTimer, setLockoutTimer] = useState(0);
   const navigate = useNavigate();
@@ -17,6 +37,16 @@ function Login({ onLoginSuccess }) {
     const params = new URLSearchParams(window.location.search);
     if (params.get("session") === "expired") {
       setSessionExpiredMsg("Your session has expired. Please log in again to continue.");
+    }
+
+    const keyParam = params.get("key");
+    if (keyParam) {
+      setLicenseKey(keyParam.toUpperCase());
+      setIsRegister(true);
+    }
+
+    if (params.get("mode") === "register") {
+      setIsRegister(true);
     }
   }, []);
 
@@ -27,25 +57,25 @@ function Login({ onLoginSuccess }) {
     }
   }, [lockoutTimer]);
 
-  const handleLogin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccessMsg("");
     setSessionExpiredMsg("");
 
-    if (lockoutTimer > 0) {
+    if (!isRegister && lockoutTimer > 0) {
       setError(`Please wait ${lockoutTimer} seconds before trying again.`);
       return;
     }
 
-    // Client-side email format regex check
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const cleanEmail = email.trim();
     if (!cleanEmail) {
-      setError("Please enter your restaurant email.");
+      setError("Please enter your email address.");
       return;
     }
     if (!emailRegex.test(cleanEmail)) {
-      setError("Please enter a valid email address (e.g. admin@restaurant360.com).");
+      setError("Please enter a valid email address (e.g. name@restaurant.com).");
       return;
     }
 
@@ -59,9 +89,27 @@ function Login({ onLoginSuccess }) {
       return;
     }
 
+    if (isRegister && !name.trim()) {
+      setError("Please enter your full name.");
+      return;
+    }
+
     try {
       setLoading(true);
-      const res = await loginUser({ email: cleanEmail, password });
+
+      let res;
+      if (isRegister) {
+        res = await registerUser({
+          name: name.trim(),
+          email: cleanEmail,
+          password,
+          restaurantName: restaurantName.trim() || "My Restaurant",
+          role: "admin", // New self-registered users are always Restaurant Owners/Admins
+          licenseKey: licenseKey.trim(),
+        });
+      } else {
+        res = await loginUser({ email: cleanEmail, password });
+      }
 
       // Save token and user details to localStorage
       localStorage.setItem("res360_token", res.token);
@@ -71,13 +119,20 @@ function Login({ onLoginSuccess }) {
         onLoginSuccess(res.user);
       }
 
-      window.location.href = "/";
+      // Redirect based on role
+      if (res.user?.role === "kitchen") {
+        window.location.href = "/kds";
+      } else if (res.user?.role === "waiter") {
+        window.location.href = "/tables";
+      } else {
+        window.location.href = "/";
+      }
     } catch (err) {
-      console.error("Login failed:", err);
-      const msg = err.message || "Invalid credentials. Please try again.";
+      console.error(isRegister ? "Registration failed:" : "Login failed:", err);
+      const msg = err.message || (isRegister ? "Registration failed. Please try again." : "Invalid credentials.");
       setError(msg);
 
-      if (msg.includes("locked") || msg.includes("failed")) {
+      if (!isRegister && (msg.includes("locked") || msg.includes("failed"))) {
         setLockoutTimer(30);
       }
     } finally {
@@ -85,15 +140,24 @@ function Login({ onLoginSuccess }) {
     }
   };
 
-  const fillCredentials = (type) => {
-    if (type === "admin") {
+  const fillDemoCredentials = (role) => {
+    setIsRegister(false);
+    setError("");
+    setSuccessMsg("");
+
+    if (role === "admin") {
       setEmail("admin@restaurant360.com");
       setPassword("admin123");
-    } else {
-      setEmail("rohit@restaurant360.com");
-      setPassword("rohit123");
+    } else if (role === "cashier") {
+      setEmail("cashier@restaurant360.com");
+      setPassword("cashier123");
+    } else if (role === "kitchen") {
+      setEmail("kitchen@restaurant360.com");
+      setPassword("chef123");
+    } else if (role === "waiter") {
+      setEmail("waiter@restaurant360.com");
+      setPassword("waiter123");
     }
-    setError("");
   };
 
   return (
@@ -112,7 +176,7 @@ function Login({ onLoginSuccess }) {
       <div
         style={{
           width: "100%",
-          maxWidth: "440px",
+          maxWidth: "460px",
           background: "#111827",
           border: "1px solid #1f2937",
           borderRadius: "20px",
@@ -121,7 +185,7 @@ function Login({ onLoginSuccess }) {
         }}
       >
         {/* Logo & Brand Header */}
-        <div style={{ textAlign: "center", marginBottom: "28px" }}>
+        <div style={{ textAlign: "center", marginBottom: "22px" }}>
           <div
             style={{
               display: "inline-flex",
@@ -133,7 +197,7 @@ function Login({ onLoginSuccess }) {
               borderRadius: "16px",
               color: "#fff",
               fontSize: "24px",
-              marginBottom: "14px",
+              marginBottom: "12px",
               boxShadow: "0 10px 20px -5px rgba(255, 122, 0, 0.4)",
             }}
           >
@@ -142,9 +206,65 @@ function Login({ onLoginSuccess }) {
           <h1 style={{ fontSize: "24px", fontWeight: "800", margin: 0, letterSpacing: "-0.5px" }}>
             Restaurant <span style={{ color: "#ff7a00" }}>360</span>
           </h1>
-          <p style={{ color: "#9ca3af", fontSize: "14px", marginTop: "6px" }}>
-            Enterprise POS & Restaurant Management Portal
+          <p style={{ color: "#9ca3af", fontSize: "13px", marginTop: "4px" }}>
+            {isRegister
+              ? "Create your Restaurant Account & Activate"
+              : "Enterprise POS & Multi-Role Staff Portal"}
           </p>
+        </div>
+
+        {/* Tab Switcher: Sign In vs Register */}
+        <div
+          style={{
+            display: "flex",
+            background: "#1f2937",
+            padding: "4px",
+            borderRadius: "12px",
+            marginBottom: "20px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setIsRegister(false);
+              setError("");
+            }}
+            style={{
+              flex: 1,
+              padding: "9px 0",
+              border: "none",
+              borderRadius: "9px",
+              fontSize: "13px",
+              fontWeight: "600",
+              cursor: "pointer",
+              background: !isRegister ? "#ff7a00" : "transparent",
+              color: !isRegister ? "#fff" : "#9ca3af",
+              transition: "all 0.2s ease",
+            }}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setIsRegister(true);
+              setError("");
+            }}
+            style={{
+              flex: 1,
+              padding: "9px 0",
+              border: "none",
+              borderRadius: "9px",
+              fontSize: "13px",
+              fontWeight: "600",
+              cursor: "pointer",
+              background: isRegister ? "#ff7a00" : "transparent",
+              color: isRegister ? "#fff" : "#9ca3af",
+              transition: "all 0.2s ease",
+            }}
+          >
+            Register Restaurant
+          </button>
         </div>
 
         {/* Session Expired Banner */}
@@ -157,7 +277,7 @@ function Login({ onLoginSuccess }) {
               padding: "10px 14px",
               color: "#fb923c",
               fontSize: "13px",
-              marginBottom: "18px",
+              marginBottom: "16px",
               display: "flex",
               alignItems: "center",
               gap: "8px",
@@ -177,7 +297,7 @@ function Login({ onLoginSuccess }) {
               padding: "10px 14px",
               color: "#fca5a5",
               fontSize: "13px",
-              marginBottom: "18px",
+              marginBottom: "16px",
               textAlign: "center",
             }}
           >
@@ -185,23 +305,99 @@ function Login({ onLoginSuccess }) {
           </div>
         )}
 
-        {/* Login Form */}
-        <form onSubmit={handleLogin}>
-          <div style={{ marginBottom: "18px" }}>
-            <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#d1d5db", marginBottom: "8px" }}>
-              Email Address
+        {/* Success Alert */}
+        {successMsg && (
+          <div
+            style={{
+              background: "rgba(16, 185, 129, 0.12)",
+              border: "1px solid #10b981",
+              borderRadius: "10px",
+              padding: "10px 14px",
+              color: "#6ee7b7",
+              fontSize: "13px",
+              marginBottom: "16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <FaCheckCircle /> <span>{successMsg}</span>
+          </div>
+        )}
+
+        {/* Dynamic Form */}
+        <form onSubmit={handleSubmit}>
+          {isRegister && (
+            <>
+              {/* Restaurant Name */}
+              <div style={{ marginBottom: "14px" }}>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#d1d5db", marginBottom: "6px" }}>
+                  Restaurant Name
+                </label>
+                <div style={{ position: "relative" }}>
+                  <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#6b7280", fontSize: "14px" }}>
+                    <FaStore />
+                  </span>
+                  <input
+                    type="text"
+                    required
+                    value={restaurantName}
+                    onChange={(e) => setRestaurantName(e.target.value)}
+                    placeholder="e.g. Spice Route Bistro"
+                    style={{
+                      width: "100%",
+                      padding: "11px 14px 11px 40px",
+                      background: "#1f2937",
+                      border: "1px solid #374151",
+                      borderRadius: "10px",
+                      color: "#fff",
+                      fontSize: "14px",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Owner Full Name */}
+              <div style={{ marginBottom: "14px" }}>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#d1d5db", marginBottom: "6px" }}>
+                  Owner Full Name
+                </label>
+                <div style={{ position: "relative" }}>
+                  <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#6b7280", fontSize: "14px" }}>
+                    <FaUser />
+                  </span>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Rohit Sharma"
+                    style={{
+                      width: "100%",
+                      padding: "11px 14px 11px 40px",
+                      background: "#1f2937",
+                      border: "1px solid #374151",
+                      borderRadius: "10px",
+                      color: "#fff",
+                      fontSize: "14px",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Email */}
+          <div style={{ marginBottom: "14px" }}>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#d1d5db", marginBottom: "6px" }}>
+              {isRegister ? "Business Email" : "Email Address"}
             </label>
             <div style={{ position: "relative" }}>
-              <span
-                style={{
-                  position: "absolute",
-                  left: "14px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "#6b7280",
-                  fontSize: "14px",
-                }}
-              >
+              <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#6b7280", fontSize: "14px" }}>
                 <FaEnvelope />
               </span>
               <input
@@ -212,7 +408,7 @@ function Login({ onLoginSuccess }) {
                 placeholder="name@restaurant360.com"
                 style={{
                   width: "100%",
-                  padding: "12px 14px 12px 42px",
+                  padding: "11px 14px 11px 40px",
                   background: "#1f2937",
                   border: "1px solid #374151",
                   borderRadius: "10px",
@@ -225,21 +421,13 @@ function Login({ onLoginSuccess }) {
             </div>
           </div>
 
-          <div style={{ marginBottom: "24px" }}>
-            <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#d1d5db", marginBottom: "8px" }}>
+          {/* Password */}
+          <div style={{ marginBottom: isRegister ? "14px" : "20px" }}>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#d1d5db", marginBottom: "6px" }}>
               Password
             </label>
             <div style={{ position: "relative" }}>
-              <span
-                style={{
-                  position: "absolute",
-                  left: "14px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "#6b7280",
-                  fontSize: "14px",
-                }}
-              >
+              <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#6b7280", fontSize: "14px" }}>
                 <FaLock />
               </span>
               <input
@@ -250,7 +438,7 @@ function Login({ onLoginSuccess }) {
                 placeholder="••••••••"
                 style={{
                   width: "100%",
-                  padding: "12px 44px 12px 42px",
+                  padding: "11px 44px 11px 40px",
                   background: "#1f2937",
                   border: "1px solid #374151",
                   borderRadius: "10px",
@@ -285,86 +473,163 @@ function Login({ onLoginSuccess }) {
             </div>
           </div>
 
+          {/* License Key (Register Mode only - Optional) */}
+          {isRegister && (
+            <div style={{ marginBottom: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                <label style={{ fontSize: "12px", fontWeight: "600", color: "#d1d5db" }}>
+                  12-Char License Key <span style={{ color: "#9ca3af", fontWeight: "normal" }}>(Optional)</span>
+                </label>
+              </div>
+              <div style={{ position: "relative" }}>
+                <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#6b7280", fontSize: "14px" }}>
+                  <FaKey />
+                </span>
+                <input
+                  type="text"
+                  value={licenseKey}
+                  onChange={(e) => setLicenseKey(e.target.value.toUpperCase())}
+                  placeholder="R360-XXXX-XXXX"
+                  style={{
+                    width: "100%",
+                    padding: "11px 14px 11px 40px",
+                    background: "#1f2937",
+                    border: "1px solid #374151",
+                    borderRadius: "10px",
+                    color: "#f59e0b",
+                    fontFamily: "monospace",
+                    letterSpacing: "1px",
+                    fontSize: "14px",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+              <p style={{ color: "#9ca3af", fontSize: "11px", margin: "4px 0 0" }}>
+                Have a key from our portfolio checkout? Enter it to activate immediately. Or leave blank for a 14-day free trial.
+              </p>
+            </div>
+          )}
+
+          {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading || lockoutTimer > 0}
+            disabled={loading || (!isRegister && lockoutTimer > 0)}
             style={{
               width: "100%",
               padding: "13px",
-              background: lockoutTimer > 0
+              background: !isRegister && lockoutTimer > 0
                 ? "#4b5563"
                 : "linear-gradient(135deg, #ff7a00, #ea580c)",
               border: "none",
               borderRadius: "10px",
               color: "#fff",
-              fontSize: "15px",
+              fontSize: "14px",
               fontWeight: "700",
-              cursor: (loading || lockoutTimer > 0) ? "not-allowed" : "pointer",
+              cursor: (loading || (!isRegister && lockoutTimer > 0)) ? "not-allowed" : "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               gap: "8px",
-              boxShadow: lockoutTimer > 0 ? "none" : "0 10px 20px -5px rgba(255, 122, 0, 0.4)",
+              boxShadow: !isRegister && lockoutTimer > 0 ? "none" : "0 10px 20px -5px rgba(255, 122, 0, 0.4)",
             }}
           >
             <FaSignInAlt />
             {loading
-              ? "Authenticating..."
-              : lockoutTimer > 0
+              ? isRegister ? "Setting up Restaurant..." : "Authenticating..."
+              : !isRegister && lockoutTimer > 0
               ? `Locked (${lockoutTimer}s)`
-              : "Sign In to Restaurant360"}
+              : isRegister
+              ? "Register & Launch Dashboard"
+              : "Sign In to Portal"}
           </button>
         </form>
 
-        {/* Demo Credentials Helper */}
-        <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid #1f2937" }}>
-          <p style={{ color: "#9ca3af", fontSize: "12px", textAlign: "center", margin: "0 0 10px" }}>
-            1-Click Demo Login for Testing:
-          </p>
-          <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
-            <button
-              type="button"
-              onClick={() => fillCredentials("admin")}
-              style={{
-                flex: 1,
-                background: "#1f2937",
-                border: "1px solid #374151",
-                borderRadius: "8px",
-                padding: "8px 12px",
-                color: "#e5e7eb",
-                fontSize: "12px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "6px",
-              }}
-            >
-              <FaUserShield style={{ color: "#f97316" }} /> Admin
-            </button>
+        {/* Demo Roles Helper (Sign In mode only) */}
+        {!isRegister && (
+          <div style={{ marginTop: "22px", paddingTop: "18px", borderTop: "1px solid #1f2937" }}>
+            <p style={{ color: "#9ca3af", fontSize: "11px", textAlign: "center", margin: "0 0 10px" }}>
+              Quick 1-Click Role Switcher (For Testing RBAC):
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+              <button
+                type="button"
+                onClick={() => fillDemoCredentials("admin")}
+                style={{
+                  background: "#1f2937",
+                  border: "1px solid #374151",
+                  borderRadius: "8px",
+                  padding: "7px 10px",
+                  color: "#e5e7eb",
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <FaUserShield style={{ color: "#f97316" }} /> <strong>Owner / Admin</strong>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => fillCredentials("staff")}
-              style={{
-                flex: 1,
-                background: "#1f2937",
-                border: "1px solid #374151",
-                borderRadius: "8px",
-                padding: "8px 12px",
-                color: "#e5e7eb",
-                fontSize: "12px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "6px",
-              }}
-            >
-              <FaUtensils style={{ color: "#38bdf8" }} /> Cashier / Staff
-            </button>
+              <button
+                type="button"
+                onClick={() => fillDemoCredentials("cashier")}
+                style={{
+                  background: "#1f2937",
+                  border: "1px solid #374151",
+                  borderRadius: "8px",
+                  padding: "7px 10px",
+                  color: "#e5e7eb",
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <FaCashRegister style={{ color: "#38bdf8" }} /> <strong>Cashier</strong>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fillDemoCredentials("kitchen")}
+                style={{
+                  background: "#1f2937",
+                  border: "1px solid #374151",
+                  borderRadius: "8px",
+                  padding: "7px 10px",
+                  color: "#e5e7eb",
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <FaFire style={{ color: "#ef4444" }} /> <strong>Kitchen / Chef</strong>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fillDemoCredentials("waiter")}
+                style={{
+                  background: "#1f2937",
+                  border: "1px solid #374151",
+                  borderRadius: "8px",
+                  padding: "7px 10px",
+                  color: "#e5e7eb",
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <FaUtensils style={{ color: "#10b981" }} /> <strong>Waiter / Floor</strong>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
