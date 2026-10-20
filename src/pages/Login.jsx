@@ -14,9 +14,12 @@ import {
   FaKey,
   FaCheckCircle,
   FaCashRegister,
-  FaFire
+  FaFire,
+  FaTimes
 } from "react-icons/fa";
 import { loginUser, registerUser } from "../services/api";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 function Login({ onLoginSuccess }) {
   const [isRegister, setIsRegister] = useState(false);
@@ -31,6 +34,16 @@ function Login({ onLoginSuccess }) {
   const [successMsg, setSuccessMsg] = useState("");
   const [sessionExpiredMsg, setSessionExpiredMsg] = useState("");
   const [lockoutTimer, setLockoutTimer] = useState(0);
+
+  // Forgot password modal state
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [forgotStep, setForgotStep] = useState(1); // 1: request code, 2: enter code & new pass
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState("");
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -137,6 +150,73 @@ function Login({ onLoginSuccess }) {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRequestResetCode = async (e) => {
+    e.preventDefault();
+    setForgotError("");
+    if (!forgotEmail.trim()) {
+      setForgotError("Please enter your registered email address.");
+      return;
+    }
+
+    try {
+      setForgotLoading(true);
+      const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to generate reset code.");
+
+      if (data.data?.resetCode) {
+        setResetCode(data.data.resetCode);
+      }
+      setForgotStep(2);
+    } catch (err) {
+      setForgotError(err.message);
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleApplyNewPassword = async (e) => {
+    e.preventDefault();
+    setForgotError("");
+
+    if (!resetCode.trim()) {
+      setForgotError("Please enter the 6-digit reset code.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setForgotError("New password must be at least 6 characters long.");
+      return;
+    }
+
+    try {
+      setForgotLoading(true);
+      const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: forgotEmail.trim(),
+          resetCode: resetCode.trim(),
+          newPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to reset password.");
+
+      setShowForgotModal(false);
+      setSuccessMsg("Password reset successfully! Please sign in with your new password.");
+      setPassword("");
+      setForgotStep(1);
+    } catch (err) {
+      setForgotError(err.message);
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -422,10 +502,34 @@ function Login({ onLoginSuccess }) {
           </div>
 
           {/* Password */}
-          <div style={{ marginBottom: isRegister ? "14px" : "20px" }}>
-            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#d1d5db", marginBottom: "6px" }}>
-              Password
-            </label>
+          <div style={{ marginBottom: isRegister ? "14px" : "10px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+              <label style={{ fontSize: "12px", fontWeight: "600", color: "#d1d5db" }}>
+                Password
+              </label>
+              {!isRegister && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotModal(true);
+                    setForgotEmail(email);
+                    setForgotError("");
+                    setForgotStep(1);
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#f97316",
+                    fontSize: "11.5px",
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  Forgot Password?
+                </button>
+              )}
+            </div>
+
             <div style={{ position: "relative" }}>
               <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#6b7280", fontSize: "14px" }}>
                 <FaLock />
@@ -506,7 +610,7 @@ function Login({ onLoginSuccess }) {
                 />
               </div>
               <p style={{ color: "#9ca3af", fontSize: "11px", margin: "4px 0 0" }}>
-                Have a key from our portfolio checkout? Enter it to activate immediately. Or leave blank for a 14-day free trial.
+                Have an activation key from our checkout? Enter it to activate immediately. Or leave blank for 14-day free trial.
               </p>
             </div>
           )}
@@ -517,6 +621,7 @@ function Login({ onLoginSuccess }) {
             disabled={loading || (!isRegister && lockoutTimer > 0)}
             style={{
               width: "100%",
+              marginTop: isRegister ? "0" : "12px",
               padding: "13px",
               background: !isRegister && lockoutTimer > 0
                 ? "#4b5563"
@@ -627,6 +732,185 @@ function Login({ onLoginSuccess }) {
               >
                 <FaUtensils style={{ color: "#10b981" }} /> <strong>Waiter / Floor</strong>
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* FORGOT PASSWORD MODAL */}
+        {showForgotModal && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0,0,0,0.8)",
+              backdropFilter: "blur(6px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+              padding: "20px",
+            }}
+          >
+            <div
+              style={{
+                width: "100%",
+                maxWidth: "420px",
+                background: "#111827",
+                border: "1px solid #374151",
+                borderRadius: "18px",
+                padding: "28px",
+                position: "relative",
+              }}
+            >
+              <button
+                onClick={() => setShowForgotModal(false)}
+                style={{
+                  position: "absolute",
+                  top: "16px",
+                  right: "16px",
+                  background: "transparent",
+                  border: "none",
+                  color: "#9ca3af",
+                  cursor: "pointer",
+                  fontSize: "16px",
+                }}
+              >
+                <FaTimes />
+              </button>
+
+              <h3 style={{ fontSize: "18px", fontWeight: "700", margin: "0 0 6px" }}>
+                Reset Restaurant Password
+              </h3>
+              <p style={{ color: "#9ca3af", fontSize: "12.5px", margin: "0 0 16px" }}>
+                {forgotStep === 1
+                  ? "Enter your registered email to request a 6-digit reset code."
+                  : "Enter the 6-digit reset code and choose your new password."}
+              </p>
+
+              {forgotError && (
+                <div style={{ background: "#7f1d1d", color: "#fca5a5", padding: "8px 12px", borderRadius: "8px", fontSize: "12px", marginBottom: "12px" }}>
+                  {forgotError}
+                </div>
+              )}
+
+              {forgotStep === 1 ? (
+                <form onSubmit={handleRequestResetCode}>
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "12px", color: "#d1d5db", marginBottom: "6px" }}>
+                      Registered Email:
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="admin@restaurant360.com"
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        background: "#1f2937",
+                        border: "1px solid #374151",
+                        borderRadius: "8px",
+                        color: "#fff",
+                        fontSize: "13.5px",
+                        boxSizing: "border-box",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    style={{
+                      width: "100%",
+                      padding: "11px",
+                      background: "linear-gradient(135deg, #ff7a00, #ea580c)",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "13.5px",
+                      fontWeight: "700",
+                      cursor: forgotLoading ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {forgotLoading ? "Generating Code..." : "Get 6-Digit Reset Code"}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleApplyNewPassword}>
+                  <div style={{ marginBottom: "12px" }}>
+                    <label style={{ display: "block", fontSize: "12px", color: "#d1d5db", marginBottom: "6px" }}>
+                      6-Digit Reset Code:
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={resetCode}
+                      onChange={(e) => setResetCode(e.target.value)}
+                      placeholder="e.g. 849201"
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        background: "#1f2937",
+                        border: "1px solid #374151",
+                        borderRadius: "8px",
+                        color: "#f59e0b",
+                        fontSize: "15px",
+                        letterSpacing: "2px",
+                        fontFamily: "monospace",
+                        boxSizing: "border-box",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "12px", color: "#d1d5db", marginBottom: "6px" }}>
+                      New Password (Min 6 chars):
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="••••••••"
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        background: "#1f2937",
+                        border: "1px solid #374151",
+                        borderRadius: "8px",
+                        color: "#fff",
+                        fontSize: "13.5px",
+                        boxSizing: "border-box",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    style={{
+                      width: "100%",
+                      padding: "11px",
+                      background: "linear-gradient(135deg, #10b981, #059669)",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "13.5px",
+                      fontWeight: "700",
+                      cursor: forgotLoading ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {forgotLoading ? "Updating..." : "Update Password & Return to Login"}
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         )}
