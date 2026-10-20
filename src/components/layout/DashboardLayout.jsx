@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
+import LicenseModal from "../common/LicenseModal";
 import "../../styles/dashboard.css";
 
 function DashboardLayout({ children }) {
@@ -10,6 +11,19 @@ function DashboardLayout({ children }) {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem("app_theme");
     return saved !== null ? saved === "dark" : true;
+  });
+
+  const [isSubscriptionLocked, setIsSubscriptionLocked] = useState(() => {
+    try {
+      const saved = localStorage.getItem("res360_user");
+      if (saved) {
+        const u = JSON.parse(saved);
+        return u.isExpired || u.subscriptionStatus === "expired";
+      }
+      return false;
+    } catch {
+      return false;
+    }
   });
 
   useEffect(() => {
@@ -26,6 +40,14 @@ function DashboardLayout({ children }) {
       document.body.classList.add("light-theme");
     }
   }, [isDarkMode]);
+
+  useEffect(() => {
+    const handleExpired = () => {
+      setIsSubscriptionLocked(true);
+    };
+    window.addEventListener("res360:subscriptionExpired", handleExpired);
+    return () => window.removeEventListener("res360:subscriptionExpired", handleExpired);
+  }, []);
 
   const handleToggleCollapse = (val) => {
     const nextVal = typeof val === "function" ? val(isCollapsed) : val;
@@ -44,8 +66,34 @@ function DashboardLayout({ children }) {
           {children}
         </div>
       </div>
+
+      {/* Subscription Lock Screen Guard */}
+      <LicenseModal
+        isOpen={isSubscriptionLocked}
+        isForced={true}
+        onClose={() => {}}
+        onLicenseUpdated={(newDetails) => {
+          setIsSubscriptionLocked(false);
+          try {
+            const saved = localStorage.getItem("res360_user");
+            if (saved) {
+              const u = JSON.parse(saved);
+              u.subscriptionStatus = newDetails.subscriptionStatus;
+              u.subscriptionPlan = newDetails.subscriptionPlan;
+              u.licenseExpiresAt = newDetails.licenseExpiresAt;
+              u.licenseKey = newDetails.licenseKey;
+              u.daysRemaining = newDetails.daysRemaining;
+              u.isExpired = false;
+              localStorage.setItem("res360_user", JSON.stringify(u));
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }}
+      />
     </div>
   );
 }
 
 export default DashboardLayout;
+

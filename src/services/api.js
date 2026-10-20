@@ -15,13 +15,48 @@ async function apiRequest(endpoint, options = {}) {
 
   if (!response.ok) {
     let errorMessage = 'Request failed';
+    let errorData = null;
     try {
-      const errorData = await response.json();
+      errorData = await response.json();
       errorMessage = errorData.message || errorMessage;
     } catch {
       errorMessage = response.statusText || errorMessage;
     }
-    throw new Error(errorMessage);
+
+    // 1. Session Expiry Handling (401)
+    if (response.status === 401 && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/register')) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('res360_token');
+        localStorage.removeItem('res360_user');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login?session=expired';
+        }
+      }
+    }
+
+    // 2. Subscription Expiry Handling (403)
+    if (response.status === 403 && errorData?.subscriptionExpired) {
+      if (typeof window !== 'undefined') {
+        try {
+          const userStr = localStorage.getItem('res360_user');
+          if (userStr) {
+            const u = JSON.parse(userStr);
+            u.subscriptionStatus = 'expired';
+            u.isExpired = true;
+            u.daysRemaining = 0;
+            localStorage.setItem('res360_user', JSON.stringify(u));
+          }
+        } catch (e) {
+          console.error(e);
+        }
+        window.dispatchEvent(new CustomEvent('res360:subscriptionExpired', { detail: errorData }));
+      }
+    }
+
+    const err = new Error(errorMessage);
+    err.status = response.status;
+    err.data = errorData;
+    throw err;
   }
 
   const result = await response.json();
